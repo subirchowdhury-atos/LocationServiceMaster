@@ -1,0 +1,222 @@
+addresses:
+  # California - Eligible
+  - input: "212 encounter bay"
+    street: "212 encounter bay"
+    city: "Alameda"
+    zip: "90255"
+    state: "California"
+    county: "Alameda"
+    country: "United States"
+    eligible: true
+    
+  - input: "977 stannage avenue"
+    street: "978 stannage avenu"
+    city: "Albany"
+    zip: "91106"
+    state: "California"
+    county: "Alameda"
+    country: "United States"
+    eligible: true
+    
+  - input: "2233 Ashbourne Dr"
+    street: "433 Camden"
+    city: "San Ramon"
+    zip: "90210"
+    state: "California"
+    county: "Contra Costa"
+    country: "United States"
+    eligible: true
+    
+  - input: "978 stannage avenue"
+    street: "1920 Hinckley"
+    city: "Albany"
+    zip: "94706"
+    state: "California"
+    county: "Alameda"
+    country: "United States"
+    eligible: true
+    
+  # Florida - Eligible
+  - input: "1313 Lee Street"
+    street: "123 Test"
+    city: "Delray Beach"
+    zip: "90255"
+    state: "Florida"
+    county: "Palm Beach"
+    country: "United States"
+    eligible: true
+    
+  # New York - Not Eligible (Corrected Counties)
+  - input: "400 E, Newburgh, NY 12550"
+    street: "400 E"
+    city: "Newburgh"
+    zip: "12550"
+    state: "New York"
+    county: "Orange"
+    country: "United States"
+    eligible: false
+    
+  - input: "123 Test, Newburgh, NY 12550"
+    street: "123 Test"
+    city: "Newburgh"
+    zip: "12550"
+    state: "New York"
+    county: "Orange"
+    country: "United States"
+    eligible: false
+    
+  - input: "834 67th, Brooklyn, NY 11220"
+    street: "834 67th"
+    city: "Brooklyn"
+    zip: "11220"
+    state: "New York"
+    county: "Kings"
+    country: "United States"
+    eligible: false
+    
+  - input: "11 Brooks Hill, Lansing, NY 14882"
+    street: "11 Brooks Hill"
+    city: "Lansing"
+    zip: "14882"
+    state: "New York"
+    county: "Tompkins"
+    country: "United States"
+    eligible: false
+    
+  - input: "2477 Norte Vista, WallKill, NY 12589"
+    street: "2477 Norte Vista"
+    city: "WallKill"
+    zip: "12589"
+    state: "New York"
+    county: "Ulster"
+    country: "United States"
+    eligible: false
+    
+  - input: "115 Noteockaway Beach Blv, Far Rockaway, NY 11694"
+    street: "115 Noteockaway Beach Blv"
+    city: "Far Rockaway"
+    state: "NY"
+    zip: "11694"
+    county: "Queens"
+    eligible: false
+    
+  - input: "1574 Coast, Newburgh, NY 12550"
+    street: "1574 Coast"
+    city: "Newburgh"
+    state: "NY"
+    zip: "12550"
+    county: "Orange"
+    eligible: false
+    
+  - input: "1725 Manzanita, Newburgh, NY 12550"
+    street: "1725 Manzanita"
+    city: "Newburgh"
+    state: "NY"
+    zip: "12550"
+    county: "Orange"
+    eligible: false
+    
+  - input: "471 9th, Brooklyn, NY 11215"
+    street: "471 9th"
+    city: "Brooklyn"
+    state: "NY"
+    zip: "11215"
+    county: "Kings"
+    eligible: false
+    
+  - input: "2416 156, Newburgh, NY 12550"
+    street: "2416 156"
+    city: "Newburgh"
+    state: "NY"
+    zip: "12550"
+    county: "Orange"
+    eligible: false
+    
+  - input: "6514 Parsons, Fresh Meadows, NY 11365"
+    street: "6514 Parsons"
+    city: "Fresh Meadows"
+    state: "NY"
+    zip: "11365"
+    county: "Queens"
+    eligible: false
+    
+  - input: "1220 Box 1220 PSC 220, Wallkill, NY 12589"
+    street: "1220 Box 1220 PSC 220"
+    city: "Wallkill"
+    state: "NY"
+    zip: "12589"
+    county: "Ulster"
+    eligible: false
+    
+  - input: "9311 La Grange, Wallkill, NY 12589"
+    street: "9311 La Grange"
+    city: "Wallkill"
+    state: "NY"
+    zip: "12589"
+    county: "Ulster"
+    eligible: false
+    
+  - input: "1140 Salisbury, Wallkill, NY 12589"
+    street: "1140 Salisbury"
+    city: "Wallkill"
+    state: "NY"
+    zip: "12589"
+    county: "Ulster"
+    eligible: false
+    
+  - input: "524 Royal Oaks, Wallkill, NY 12589"
+    street: "524 Royal Oaks"
+    city: "Wallkill"
+    state: "NY"
+    zip: "12589"
+    county: "Ulster"
+    eligible: false
+    
+  - input: "2101 Raymond, Wallkill, NY 12589"
+    street: "2101 Raymond"
+    city: "Wallkill"
+    state: "NY"
+    zip: "12589"
+    county: "Ulster"
+    eligible: false
+    
+  - input: "16004 17th, Whitestone, NY 11357"
+    street: "16004 17th"
+    city: "Whitestone"
+    state: "NY"
+    zip: "11357"
+    county: "Queens"
+    eligible: false
+    
+  - input: "1356 Cleveland, Niagara Falls, NY 14305"
+    street: "1356 Cleveland"
+    city: "Niagara Falls"
+    state: "NY"
+    zip: "14305"
+    county: "Niagara"
+    eligible: false
+    
+  # Pennsylvania - Not Eligible
+  - input: "23 Green, Clairton, PA 15025"
+    street: "23 Green"
+    city: "Clairton"
+    state: "PA"
+    zip: "15025"
+    county: "Allegheny"
+    eligible: false
+    
+  - input: "760 Sproul, Springfield, PA 19064"
+    street: "760 Sproul"
+    city: "Springfield"
+    state: "PA"
+    zip: "19064"
+    county: "Delaware"
+    eligible: false
+    
+  - input: "320 Harrison, Lewisburg, PA 17837"
+    street: "320 Harrison"
+    city: "Lewisburg"
+    state: "PA"
+    zip: "17837"
+    county: "Union"
+    eligible: false

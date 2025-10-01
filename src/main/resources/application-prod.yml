@@ -1,0 +1,202 @@
+# Production Profile Configuration
+# Equivalent to config/environments/production.rb
+
+spring:
+  # Production optimizations
+  devtools:
+    restart:
+      enabled: false
+    livereload:
+      enabled: false
+  
+  # Mail Configuration (production SMTP)
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+    properties:
+      mail.smtp.auth: true
+      mail.smtp.starttls.enable: true
+      mail.smtp.starttls.required: true
+      mail.smtp.connectiontimeout: 5000
+      mail.smtp.timeout: 5000
+      mail.smtp.writetimeout: 5000
+    test-connection: false
+  
+  # Thymeleaf - enable caching
+  thymeleaf:
+    cache: true
+    check-template-location: true
+  
+  # JPA/Hibernate - production settings
+  jpa:
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+        use_sql_comments: false
+        jdbc:
+          batch_size: 20
+        order_inserts: true
+        order_updates: true
+        query:
+          in_clause_parameter_padding: true
+        cache:
+          use_second_level_cache: true
+          use_query_cache: true
+          region:
+            factory_class: org.hibernate.cache.jcache.JCacheRegionFactory
+    hibernate:
+      ddl-auto: validate  # Never auto-update schema in production
+  
+  # Database Connection Pool - optimized for production
+  datasource:
+    url: ${DATABASE_URL}
+    username: ${DATABASE_USERNAME}
+    password: ${DATABASE_PASSWORD}
+    hikari:
+      maximum-pool-size: ${DB_POOL_SIZE:20}
+      minimum-idle: ${DB_POOL_MIN_IDLE:10}
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      leak-detection-threshold: 60000
+      connection-test-query: SELECT 1
+  
+  # Cache Configuration (Redis for distributed caching)
+  cache:
+    type: redis
+    redis:
+      time-to-live: 3600000
+      cache-null-values: false
+      enable-statistics: true
+  
+  # Redis Configuration
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD}
+      timeout: 2000ms
+      ssl: ${REDIS_SSL:false}
+      jedis:
+        pool:
+          max-active: 20
+          max-idle: 10
+          min-idle: 5
+          max-wait: 2000ms
+
+# Server Configuration
+server:
+  port: ${SERVER_PORT:8080}
+  compression:
+    enabled: true
+    mime-types: application/json,application/xml,text/html,text/xml,text/plain
+    min-response-size: 1024
+  error:
+    include-message: never  # Don't expose internal errors
+    include-binding-errors: never
+    include-stacktrace: never  # Never expose stack traces in production
+    include-exception: false
+  # SSL Configuration (if needed)
+  ssl:
+    enabled: ${SSL_ENABLED:false}
+    key-store: ${SSL_KEY_STORE:}
+    key-store-password: ${SSL_KEY_STORE_PASSWORD:}
+    key-store-type: ${SSL_KEY_STORE_TYPE:PKCS12}
+
+# Logging - production level
+logging:
+  level:
+    root: WARN
+    com.locationservicemaster: INFO
+    org.springframework.web: WARN
+    org.springframework.security: WARN
+    org.hibernate.SQL: WARN
+    org.hibernate.type.descriptor.sql: WARN
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: ${LOG_PATH:/var/log/location-service}/location-service-master.log
+    max-size: 50MB
+    max-history: 30
+    total-size-cap: 1GB
+
+# Management/Actuator - restricted in production
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: when-authorized  # Only show details to authorized users
+      show-components: when-authorized
+      probes:
+        enabled: true
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+    tags:
+      application: ${spring.application.name}
+      environment: production
+
+# API Configuration
+api:
+  security:
+    enabled: true
+    tokens: ${API_TOKENS}  # Comma-separated list from environment variable
+    public-paths: >
+      /api/v1/address/health,
+      /api/v1/address/info,
+      /api/actuator/health,
+      /api/actuator/info
+
+# Email Configuration
+email:
+  default-from: ${EMAIL_DEFAULT_FROM:noreply@locationservice.com}
+
+# External API Configuration
+external:
+  api:
+    timeout: 5000
+    max-retries: 3
+    retry-delay: 1000
+    geocoding:
+      enabled: ${GEOCODING_ENABLED:true}
+      provider: ${GEOCODING_PROVIDER:google}
+      api-key: ${GEOCODING_API_KEY}
+      base-url: ${GEOCODING_BASE_URL:https://maps.googleapis.com/maps/api/geocode/json}
+
+# Eligibility Rules
+eligibility:
+  rules:
+    enabled: true
+    cache-duration: 3600
+    min-confidence-score: 0.5
+
+# Production-specific settings
+debug: false
+
+# Static Resource Caching
+spring.web.resources:
+  cache:
+    period: 31536000  # 1 year
+    cachecontrol:
+      max-age: 365d
+      must-revalidate: false
+      public: true
+
+# Request/Response compression
+server.compression:
+  enabled: true
+
+# Connection timeouts
+spring:
+  mvc:
+    async:
+      request-timeout: 30000  # 30 seconds

@@ -1,0 +1,320 @@
+spring:
+  application:
+    name: location-service-master
+  
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:local}
+  
+  jackson:
+    property-naming-strategy: SNAKE_CASE
+    serialization:
+      write-dates-as-timestamps: false
+    deserialization:
+      fail-on-unknown-properties: false
+    default-property-inclusion: NON_NULL
+
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:your-email@example.com}
+    password: ${MAIL_PASSWORD:your-password}
+    properties:
+      mail.smtp.auth: true
+      mail.smtp.starttls.enable: true
+      mail.smtp.starttls.required: true
+      mail.smtp.connectiontimeout: 5000
+      mail.smtp.timeout: 5000
+      mail.smtp.writetimeout: 5000
+    test-connection: false
+  
+  thymeleaf:
+    prefix: classpath:/templates/
+    suffix: .html
+    mode: HTML
+    encoding: UTF-8
+    check-template-location: true
+  
+  jpa:
+    open-in-view: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+        jdbc:
+          batch_size: 20
+        order_inserts: true
+        order_updates: true
+    hibernate:
+      ddl-auto: validate
+  
+  datasource:
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 5
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+
+  config:
+    import: optional:classpath:application-eligible-regions.yml
+
+  cache:
+    type: redis
+    redis:
+      time-to-live: 3600000
+      cache-null-values: false
+      enable-statistics: true
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      timeout: 2000ms
+      jedis:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+          max-wait: -1ms
+
+server:
+  port: ${SERVER_PORT:8080}
+  servlet:
+    context-path: /api
+  error:
+    include-message: always
+    include-binding-errors: always
+    include-stacktrace: on_param
+    include-exception: false
+  compression:
+    enabled: true
+    mime-types: application/json,application/xml,text/html,text/xml,text/plain
+    min-response-size: 1024
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: when-authorized
+      show-components: when-authorized
+      probes:
+        enabled: true
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+    tags:
+      application: ${spring.application.name}
+      environment: ${spring.profiles.active}
+
+logging:
+  level:
+    root: INFO
+    com.locationservicemaster: INFO
+    org.springframework.web: INFO
+    org.springframework.security: INFO
+    org.hibernate.SQL: INFO
+    org.hibernate.type.descriptor.sql: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: ${LOG_PATH:logs}/${spring.application.name}.log
+    max-size: 10MB
+    max-history: 30
+
+# API Configuration
+api:
+  version: v1
+  default-version: v1
+  security:
+    enabled: ${API_SECURITY_ENABLED:true}
+    tokens: ${API_TOKENS:00000-000-00000,11111-111-11111}
+    public-paths: >
+      /api/v1/address/health,
+      /api/v1/address/info,
+      /api/swagger-ui/**,
+      /api/v3/api-docs/**,
+      /api/swagger-ui.html
+
+# Email Configuration
+email:
+  default-from: ${EMAIL_DEFAULT_FROM:from@example.com}
+  
+# External API Configuration
+external:
+  api:
+    timeout: 5000
+    max-retries: 3
+    retry-delay: 1000
+    geocoding:
+      enabled: ${GEOCODING_ENABLED:false}
+      provider: ${GEOCODING_PROVIDER:google}
+      api-key: ${GEOCODING_API_KEY:}
+      base-url: ${GEOCODING_BASE_URL:https://maps.googleapis.com/maps/api/geocode/json}
+
+# Application specific configuration
+eligibility:
+  rules:
+    enabled: true
+    cache-duration: 3600
+    min-confidence-score: 0.5
+    default-zones:
+      - zone-name: "California Metro"
+        zone-type: "STATE"
+        states: ["CA", "California"]
+        priority: 5
+      - zone-name: "Premium Cities"
+        zone-type: "CITY"
+        cities: ["San Francisco", "Oakland", "San Jose", "Berkeley", "Alameda"]
+        priority: 10
+
+# SpringDoc OpenAPI Configuration
+springdoc:
+  api-docs:
+    enabled: true
+    path: /v3/api-docs
+    groups:
+      enabled: true
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
+    tags-sorter: alpha
+    operations-sorter: method
+    display-request-duration: true
+    disable-swagger-default-url: true
+    doc-expansion: none
+    filter: true
+    show-extensions: true
+    show-common-extensions: true
+  default-produces-media-type: application/json
+  default-consumes-media-type: application/json
+  cache:
+    disabled: false
+
+---
+# Local Development Profile
+spring:
+  config:
+    activate:
+      on-profile: local
+  
+  mail:
+    host: localhost
+    port: 1025
+    properties:
+      mail.smtp.auth: false
+      mail.smtp.starttls.enable: false
+      mail.smtp.starttls.required: false
+  
+  thymeleaf:
+    cache: false
+  
+  jpa:
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+    hibernate:
+      ddl-auto: update
+  
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+logging:
+  level:
+    root: INFO
+    com.locationservicemaster: DEBUG
+    org.springframework.web: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql: TRACE
+
+management:
+  endpoint:
+    health:
+      show-details: always
+      show-components: always
+
+---
+# Test Profile
+spring:
+  config:
+    activate:
+      on-profile: test
+  
+  mail:
+    host: localhost
+    port: 3025
+    username: test@example.com
+    password: test
+    properties:
+      mail.smtp.auth: false
+      mail.smtp.starttls.enable: false
+      mail.smtp.starttls.required: false
+  
+  thymeleaf:
+    cache: false
+  
+  jpa:
+    show-sql: false
+    hibernate:
+      ddl-auto: create-drop
+  
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+api:
+  security:
+    enabled: false
+
+logging:
+  level:
+    root: WARN
+    com.locationservicemaster: INFO
+    org.springframework.web: WARN
+    org.hibernate.SQL: WARN
+
+---
+# Production Profile
+spring:
+  config:
+    activate:
+      on-profile: prod
+  
+  thymeleaf:
+    cache: true
+  
+  jpa:
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+    hibernate:
+      ddl-auto: validate
+
+logging:
+  level:
+    root: WARN
+    com.locationservicemaster: INFO
+    org.springframework.web: WARN
+    org.hibernate.SQL: WARN
+    org.hibernate.type.descriptor.sql: WARN
+
+management:
+  endpoint:
+    health:
+      show-details: when-authorized
+      show-components: when-authorized
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus

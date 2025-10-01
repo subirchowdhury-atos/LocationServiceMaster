@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Page Not Found (404)</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <style>
+    body {
+      background-color: #EFEFEF;
+      color: #2E2F30;
+      text-align: center;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+
+    .error-container {
+      width: 95%;
+      max-width: 33em;
+      margin: 4em auto 0;
+    }
+
+    .error-box {
+      border: 1px solid #CCC;
+      border-right-color: #999;
+      border-left-color: #999;
+      border-bottom-color: #BBB;
+      border-top: #0066CC solid 4px;
+      border-top-left-radius: 9px;
+      border-top-right-radius: 9px;
+      background-color: white;
+      padding: 7px 12% 0;
+      box-shadow: 0 3px 8px rgba(50, 50, 50, 0.17);
+    }
+
+    h1 {
+      font-size: 120%;
+      color: #0066CC;
+      line-height: 1.5em;
+      margin: 1em 0;
+    }
+
+    .error-code {
+      font-size: 72px;
+      font-weight: bold;
+      color: #0066CC;
+      margin: 0.5em 0;
+    }
+
+    .error-message {
+      margin: 0 0 1em;
+      padding: 1em;
+      background-color: #F7F7F7;
+      border: 1px solid #CCC;
+      border-right-color: #999;
+      border-left-color: #999;
+      border-bottom-color: #999;
+      border-bottom-left-radius: 4px;
+      border-bottom-right-radius: 4px;
+      border-top-color: #DADADA;
+      color: #666;
+      box-shadow: 0 3px 8px rgba(50, 50, 50, 0.17);
+    }
+
+    a {
+      color: #0066CC;
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    .home-link {
+      display: inline-block;
+      margin-top: 1em;
+      padding: 0.5em 1.5em;
+      background-color: #0066CC;
+      color: white;
+      border-radius: 4px;
+      text-decoration: none;
+    }
+
+    .home-link:hover {
+      background-color: #0052A3;
+      text-decoration: none;
+    }
+
+    .timestamp {
+      font-size: 0.85em;
+      color: #999;
+      margin-top: 1em;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="error-container">
+    <div class="error-box">
+      <div class="error-code">404</div>
+      <h1>Page Not Found</h1>
+      <p>The page you were looking for doesn't exist.</p>
+    </div>
+    <div class="error-message">
+      <p>You may have mistyped the address or the page may have moved.</p>
+      <p th:if="${path}">Requested path: <strong th:text="${path}"></strong></p>
+      <p><a href="/api" class="home-link">Return to Home</a></p>
+      <div class="timestamp" th:text="'Error occurred at: ' + ${#temporals.format(timestamp, 'yyyy-MM-dd HH:mm:ss')}"></div>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,201 @@
+spring:
+  application:
+    name: location-service-master
+  
+  # Database Configuration - PostgreSQL for local development
+  datasource:
+    url: jdbc:postgresql://localhost:5432/location_service_dev
+    driver-class-name: org.postgresql.Driver
+    username: postgres
+    password: postgres
+    hikari:
+      maximum-pool-size: 5
+      minimum-idle: 2
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+  
+  # JPA Configuration
+  jpa:
+    show-sql: true
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+        use_sql_comments: true
+        jdbc:
+          batch_size: 20
+        order_inserts: true
+        order_updates: true
+  
+  # Mail Configuration - Use MailHog or similar for local testing
+  mail:
+    host: localhost
+    port: 1025
+    username: 
+    password: 
+    properties:
+      mail.smtp.auth: false
+      mail.smtp.starttls.enable: false
+      mail.smtp.starttls.required: false
+    test-connection: false
+  
+  # Thymeleaf Configuration
+  thymeleaf:
+    cache: false
+    prefix: classpath:/templates/
+    suffix: .html
+  
+  # Jackson Configuration
+  jackson:
+    property-naming-strategy: SNAKE_CASE
+    serialization:
+      write-dates-as-timestamps: false
+    deserialization:
+      fail-on-unknown-properties: false
+    default-property-inclusion: NON_NULL
+  
+  # Redis Configuration
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      password: 
+      timeout: 2000ms
+      jedis:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+          max-wait: -1ms
+  
+  # Cache Configuration
+  cache:
+    type: redis
+    redis:
+      time-to-live: 3600000
+      cache-null-values: false
+      enable-statistics: true
+
+# Server Configuration
+server:
+  port: 8080
+  servlet:
+    context-path: /api
+  error:
+    include-message: always
+    include-binding-errors: always
+    include-stacktrace: always
+  compression:
+    enabled: true
+    mime-types: application/json,application/xml,text/html,text/xml,text/plain
+
+# Management/Actuator Configuration
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: always
+      show-components: always
+      probes:
+        enabled: true
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+    tags:
+      application: ${spring.application.name}
+      environment: local
+
+# Logging Configuration
+logging:
+  level:
+    root: INFO
+    com.locationservicemaster: DEBUG
+    org.springframework.web: DEBUG
+    org.springframework.security: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    org.hibernate.orm.jdbc.bind: TRACE
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: logs/location-service-master.log
+    max-size: 10MB
+    max-history: 7
+  logging:
+    level:
+      io.netty.resolver.dns.DnsServerAddressStreamProviders: ERROR
+
+# API Configuration
+api:
+  version: v1
+  default-version: v1
+  security:
+    enabled: false
+    tokens: 00000-000-00000,11111-111-11111
+    public-paths: >
+      /api/v1/address/health,
+      /api/v1/address/info,
+      /api/swagger-ui/**,
+      /api/v3/api-docs/**,
+      /api/swagger-ui.html,
+      /api/actuator/**
+
+# Email Configuration
+email:
+  default-from: noreply@localhost.local
+  
+# External API Configuration
+external:
+  api:
+    timeout: 5000
+    max-retries: 3
+    retry-delay: 1000
+    geocoding:
+      enabled: false
+      provider: google
+      api-key: fake-google-api-key
+      base-url: https://maps.googleapis.com/maps/api/geocode/json
+
+# Eligibility Rules Configuration
+eligibility:
+  rules:
+    enabled: true
+    cache-duration: 3600
+    min-confidence-score: 0.5
+    default-zones:
+      - zone-name: "California Metro"
+        zone-type: "STATE"
+        states: ["CA", "California"]
+        priority: 5
+      - zone-name: "Premium Cities"
+        zone-type: "CITY"
+        cities: ["San Francisco", "Oakland", "San Jose", "Berkeley", "Alameda"]
+        priority: 10
+      - zone-name: "Test Zone"
+        zone-type: "CITY"
+        cities: ["TestCity", "LocalCity"]
+        priority: 1
+
+# SpringDoc OpenAPI Configuration
+springdoc:
+  api-docs:
+    enabled: true
+    path: /v3/api-docs
+    groups:
+      enabled: true
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
+    display-request-duration: true
+    tags-sorter: alpha
+    operations-sorter: method
+    doc-expansion: none
+    filter: true

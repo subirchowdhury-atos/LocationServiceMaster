@@ -1,0 +1,144 @@
+# Test configuration for Spring Boot tests
+# Equivalent to config/environments/test.rb
+
+spring:
+  # Database Configuration (H2 in-memory - wiped between test runs)
+  datasource:
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+  
+  # JPA Configuration
+  jpa:
+    hibernate:
+      ddl-auto: create-drop  # Recreate schema between test runs
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+        format_sql: false
+        show_sql: false
+    show-sql: false
+  
+  # H2 Console (disabled for tests)
+  h2:
+    console:
+      enabled: false
+  
+  # Cache (disabled - no caching in tests)
+  cache:
+    type: none
+  
+  # Redis (disabled for tests)
+  data:
+    redis:
+      repositories:
+        enabled: false
+  
+  # Mail Configuration (test delivery method - accumulates in memory)
+  mail:
+    host: localhost
+    port: 3025
+    properties:
+      mail.smtp.auth: false
+      mail.smtp.starttls.enable: false
+    # Equivalent to Rails :test delivery method
+    test-connection: false
+  
+  # Thymeleaf - no caching for tests
+  thymeleaf:
+    cache: false
+  
+  # MVC - show exceptions (not render exception templates)
+  mvc:
+    throw-exception-if-no-handler-found: true
+  web:
+    resources:
+      add-mappings: true
+
+# Server Configuration
+server:
+  port: 0  # Random port for parallel test execution
+  error:
+    include-message: always
+    include-binding-errors: always
+    include-stacktrace: always  # Full error reports in tests
+    include-exception: true
+
+# Logging - minimal for clean test output
+logging:
+  level:
+    root: WARN
+    com.locationservicemaster: INFO
+    org.springframework.web: WARN
+    org.springframework.security: WARN
+    org.hibernate: WARN
+    org.hibernate.SQL: WARN
+    org.springframework.test: WARN
+  pattern:
+    console: "%d{HH:mm:ss.SSS} %-5level %logger{36} - %msg%n"
+
+# API Security Configuration
+api:
+  security:
+    enabled: true
+    tokens: 00000-000-00000,11111-111-11111
+    public-paths: /api/actuator/**,/api/v1/address/health,/api/swagger-ui/**,/api/v3/api-docs/**
+
+# Email Configuration
+email:
+  default-from: test@example.com
+
+# Eligibility Rules
+eligibility:
+  rules:
+    enabled: true
+    cache-duration: 0  # No caching in tests
+    min-confidence-score: 0.5
+    default-zones:
+      - zone-name: "California Metro"
+        zone-type: "STATE"
+        states: ["CA", "California"]
+        priority: 5
+      - zone-name: "Premium Cities"
+        zone-type: "CITY"
+        cities: ["San Francisco", "Oakland", "San Jose", "Berkeley", "Alameda"]
+        priority: 10
+
+# External API Configuration (mocked in tests)
+external:
+  api:
+    timeout: 1000
+    max-retries: 1
+    retry-delay: 100
+    geocoding:
+      enabled: false  # Mock external services in tests
+
+# Test-specific configuration
+test:
+  mock-external-services: true
+
+# Disable Swagger/OpenAPI for tests
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
+# Management/Actuator - minimal for tests
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
+
+# Static Resources - Cache for 1 hour like Rails test config
+spring.web.resources:
+  cache:
+    period: 3600  # 1 hour
+    cachecontrol:
+      max-age: 1h
+      public: true

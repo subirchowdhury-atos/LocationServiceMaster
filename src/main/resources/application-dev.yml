@@ -1,0 +1,128 @@
+# Development Profile Configuration
+# Equivalent to config/environments/development.rb
+
+spring:
+  # Disable caching for development (reload on every request)
+  devtools:
+    restart:
+      enabled: true
+    livereload:
+      enabled: true
+  
+  # Mail Configuration (local SMTP server like MailHog)
+  mail:
+    host: localhost
+    port: 1025
+    properties:
+      mail.smtp.auth: false
+      mail.smtp.starttls.enable: false
+      mail.smtp.starttls.required: false
+    test-connection: false
+  
+  # Thymeleaf - disable caching for template changes
+  thymeleaf:
+    cache: false
+    check-template-location: true
+  
+  # JPA/Hibernate - show SQL and auto-update schema
+  jpa:
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        use_sql_comments: true
+    hibernate:
+      ddl-auto: update  # Automatically update schema (like Rails migrations on page load)
+  
+  # Database (use H2 for quick local dev or PostgreSQL)
+  datasource:
+    hikari:
+      maximum-pool-size: 5
+      minimum-idle: 2
+      connection-timeout: 20000
+  
+  # Cache Configuration (in-memory or disabled)
+  cache:
+    type: simple  # Use simple in-memory cache for development
+  
+  # Redis (local instance)
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      password:
+      timeout: 2000ms
+
+# Server Configuration
+server:
+  port: 8080
+  error:
+    include-message: always
+    include-binding-errors: always
+    include-stacktrace: always  # Full error reports in development
+    include-exception: true
+
+# Logging - verbose for development
+logging:
+  level:
+    root: INFO
+    com.locationservicemaster: DEBUG
+    org.springframework.web: DEBUG
+    org.springframework.security: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql: TRACE
+    org.hibernate.orm.jdbc.bind: TRACE
+  pattern:
+    console: "%clr(%d{yyyy-MM-dd HH:mm:ss.SSS}){faint} %clr(%5p) %clr(${PID:- }){magenta} %clr(---){faint} %clr([%15.15t]){faint} %clr(%-40.40logger{39}){cyan} %clr(:){faint} %m%n%wEx"
+
+# Management/Actuator - full access in development
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"  # Expose all actuator endpoints
+  endpoint:
+    health:
+      show-details: always
+      show-components: always
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+
+# API Configuration
+api:
+  security:
+    enabled: false  # Disable API token auth for easier local development
+    public-paths: "/**"  # All paths public in dev
+
+# Email Configuration
+email:
+  default-from: dev@localhost
+
+# External API Configuration
+external:
+  api:
+    timeout: 10000  # Longer timeout for debugging
+    max-retries: 1
+    retry-delay: 500
+    geocoding:
+      enabled: false  # Use mock data in development
+
+# Eligibility Rules
+eligibility:
+  rules:
+    enabled: true
+    cache-duration: 60  # Short cache for testing
+    min-confidence-score: 0.5
+
+# Development-specific settings
+debug: true
+
+# Asset/Static Resource Configuration
+spring.web.resources:
+  cache:
+    period: 0  # No caching of static resources
+    cachecontrol:
+      no-cache: true
+      no-store: true
