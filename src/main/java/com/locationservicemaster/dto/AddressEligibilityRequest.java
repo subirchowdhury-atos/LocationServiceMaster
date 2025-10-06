@@ -21,15 +21,12 @@ public class AddressEligibilityRequest {
     @JsonProperty("street_address_2")
     private String streetAddress2;
     
-    @NotBlank(message = "City is required")
     @JsonProperty("city")
     private String city;
     
-    @NotBlank(message = "State is required")
     @JsonProperty("state")
     private String state;
     
-    @NotBlank(message = "Zip code is required")
     @Pattern(regexp = "^\\d{5}(-\\d{4})?$", message = "Invalid zip code format")
     @JsonProperty("zip_code")
     private String zipCode;

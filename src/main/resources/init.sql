@@ -1,4 +1,5 @@
 -- Sample data initialization script for LocationServiceMaster
+-- Includes data from addresses.yml and application-eligible-regions.yml
 
 -- Create tables if they don't exist (backup in case JPA doesn't create them)
 CREATE TABLE IF NOT EXISTS addresses (
@@ -35,19 +36,19 @@ CREATE TABLE IF NOT EXISTS eligibility_zones (
 CREATE TABLE IF NOT EXISTS zone_zip_codes (
     zone_id BIGINT NOT NULL,
     zip_code VARCHAR(10),
-    FOREIGN KEY (zone_id) REFERENCES eligibility_zones(id)
+    FOREIGN KEY (zone_id) REFERENCES eligibility_zones(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS zone_cities (
     zone_id BIGINT NOT NULL,
     city VARCHAR(100),
-    FOREIGN KEY (zone_id) REFERENCES eligibility_zones(id)
+    FOREIGN KEY (zone_id) REFERENCES eligibility_zones(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS zone_states (
     zone_id BIGINT NOT NULL,
     state VARCHAR(50),
-    FOREIGN KEY (zone_id) REFERENCES eligibility_zones(id)
+    FOREIGN KEY (zone_id) REFERENCES eligibility_zones(id) ON DELETE CASCADE
 );
 
 -- Create indexes
@@ -58,74 +59,145 @@ CREATE INDEX IF NOT EXISTS idx_zone_name ON eligibility_zones(zone_name);
 CREATE INDEX IF NOT EXISTS idx_zone_type ON eligibility_zones(zone_type);
 CREATE INDEX IF NOT EXISTS idx_active ON eligibility_zones(is_active);
 
--- Insert sample eligibility zones
-INSERT INTO eligibility_zones (zone_name, zone_type, priority, is_active) VALUES
-    ('Chicago Metro Area', 'CITY', 10, true),
-    ('Illinois State', 'STATE', 5, true),
-    ('Premium ZIP Codes', 'ZIP_CODE', 15, true),
-    ('Extended Service Area', 'COORDINATES', 8, true),
-    ('Custom Zone 1', 'CUSTOM', 3, true)
-ON CONFLICT (zone_name) DO NOTHING;
+-- Clear existing data
+TRUNCATE TABLE zone_cities, zone_states, zone_zip_codes, eligibility_zones, addresses CASCADE;
 
--- Get zone IDs for reference
+-- Insert eligibility zones from application-eligible-regions.yml
+-- California - Alameda County
+INSERT INTO eligibility_zones (zone_name, zone_type, priority, is_active) VALUES
+    ('California-Alameda County', 'COUNTY', 10, true);
+
 DO $$
 DECLARE
-    chicago_zone_id BIGINT;
-    illinois_zone_id BIGINT;
-    premium_zip_id BIGINT;
-    coord_zone_id BIGINT;
+    alameda_zone_id BIGINT;
 BEGIN
-    SELECT id INTO chicago_zone_id FROM eligibility_zones WHERE zone_name = 'Chicago Metro Area';
-    SELECT id INTO illinois_zone_id FROM eligibility_zones WHERE zone_name = 'Illinois State';
-    SELECT id INTO premium_zip_id FROM eligibility_zones WHERE zone_name = 'Premium ZIP Codes';
-    SELECT id INTO coord_zone_id FROM eligibility_zones WHERE zone_name = 'Extended Service Area';
-
-    -- Insert cities for Chicago Metro Area
+    SELECT id INTO alameda_zone_id FROM eligibility_zones WHERE zone_name = 'California-Alameda County';
+    
+    INSERT INTO zone_states (zone_id, state) VALUES (alameda_zone_id, 'California');
+    
     INSERT INTO zone_cities (zone_id, city) VALUES
-        (chicago_zone_id, 'Chicago'),
-        (chicago_zone_id, 'Evanston'),
-        (chicago_zone_id, 'Oak Park'),
-        (chicago_zone_id, 'Naperville'),
-        (chicago_zone_id, 'Aurora'),
-        (chicago_zone_id, 'Joliet')
-    ON CONFLICT DO NOTHING;
-
-    -- Insert states for Illinois zone
-    INSERT INTO zone_states (zone_id, state) VALUES
-        (illinois_zone_id, 'IL'),
-        (illinois_zone_id, 'Illinois')
-    ON CONFLICT DO NOTHING;
-
-    -- Insert premium ZIP codes
-    INSERT INTO zone_zip_codes (zone_id, zip_code) VALUES
-        (premium_zip_id, '60601'),
-        (premium_zip_id, '60602'),
-        (premium_zip_id, '60603'),
-        (premium_zip_id, '60604'),
-        (premium_zip_id, '60605'),
-        (premium_zip_id, '60606'),
-        (premium_zip_id, '60607'),
-        (premium_zip_id, '60610'),
-        (premium_zip_id, '60611'),
-        (premium_zip_id, '60614'),
-        (premium_zip_id, '60615'),
-        (premium_zip_id, '60616')
-    ON CONFLICT DO NOTHING;
-
-    -- Update coordinate bounds for Extended Service Area (Chicago area)
-    UPDATE eligibility_zones 
-    SET min_latitude = 41.5, 
-        max_latitude = 42.5,
-        min_longitude = -88.5,
-        max_longitude = -87.0
-    WHERE id = coord_zone_id;
+        (alameda_zone_id, 'Alameda'),
+        (alameda_zone_id, 'Albany'),
+        (alameda_zone_id, 'Berkeley'),
+        (alameda_zone_id, 'Dublin'),
+        (alameda_zone_id, 'Emeryville'),
+        (alameda_zone_id, 'Fremont'),
+        (alameda_zone_id, 'Hayward'),
+        (alameda_zone_id, 'Livermore'),
+        (alameda_zone_id, 'Newark'),
+        (alameda_zone_id, 'Oakland'),
+        (alameda_zone_id, 'Piedmont'),
+        (alameda_zone_id, 'Pleasanton'),
+        (alameda_zone_id, 'San Leandro'),
+        (alameda_zone_id, 'Union City');
 END $$;
 
--- Insert sample addresses with eligibility status
-INSERT INTO addresses (street_address, city, state, zip_code, country, latitude, longitude, is_eligible, eligibility_reason) VALUES
-    ('123 N Michigan Ave', 'Chicago', 'IL', '60601', 'USA', 41.8781, -87.6298, true, 'Address is eligible for service (Zone: Premium ZIP Codes, Confidence: 100%)'),
-    ('456 State St', 'Chicago', 'IL', '60605', 'USA', 41.8781, -87.6298, true, 'Address is eligible for service (Zone: Premium ZIP Codes, Confidence: 100%)'),
-    ('789 Oak St', 'Evanston', 'IL', '60201', 'USA', 42.0451, -87.6877, true, 'Address is eligible for service (Zone: Chicago Metro Area, Confidence: 80%)'),
-    ('321 Main St', 'Springfield', 'IL', '62701', 'USA', 39.7817, -89.6501, true, 'Address is eligible for service (Zone: Illinois State, Confidence: 60%)'),
-    ('999 Rural Rd', 'Remote Town', 'WY', '82001', 'USA', 41.1400, -104.8202, false, 'Address is not in any eligible service area')
-ON CONFLICT DO NOTHING;
+-- California - Contra Costa County
+INSERT INTO eligibility_zones (zone_name, zone_type, priority, is_active) VALUES
+    ('California-Contra Costa County', 'COUNTY', 10, true);
+
+DO $$
+DECLARE
+    contra_costa_zone_id BIGINT;
+BEGIN
+    SELECT id INTO contra_costa_zone_id FROM eligibility_zones WHERE zone_name = 'California-Contra Costa County';
+    
+    INSERT INTO zone_states (zone_id, state) VALUES (contra_costa_zone_id, 'California');
+    
+    INSERT INTO zone_cities (zone_id, city) VALUES
+        (contra_costa_zone_id, 'Antioch'),
+        (contra_costa_zone_id, 'Brentwood'),
+        (contra_costa_zone_id, 'Clayton'),
+        (contra_costa_zone_id, 'Concord'),
+        (contra_costa_zone_id, 'Danville'),
+        (contra_costa_zone_id, 'El Cerrito'),
+        (contra_costa_zone_id, 'Lafayette'),
+        (contra_costa_zone_id, 'Martinez'),
+        (contra_costa_zone_id, 'Oakley'),
+        (contra_costa_zone_id, 'Pittsburg'),
+        (contra_costa_zone_id, 'Pleasant Hill'),
+        (contra_costa_zone_id, 'Richmond'),
+        (contra_costa_zone_id, 'San Pablo'),
+        (contra_costa_zone_id, 'San Ramon'),
+        (contra_costa_zone_id, 'Walnut Creek');
+END $$;
+
+-- Florida - Palm Beach County
+INSERT INTO eligibility_zones (zone_name, zone_type, priority, is_active) VALUES
+    ('Florida-Palm Beach County', 'COUNTY', 10, true);
+
+DO $$
+DECLARE
+    palm_beach_zone_id BIGINT;
+BEGIN
+    SELECT id INTO palm_beach_zone_id FROM eligibility_zones WHERE zone_name = 'Florida-Palm Beach County';
+    
+    INSERT INTO zone_states (zone_id, state) VALUES (palm_beach_zone_id, 'Florida');
+    
+    INSERT INTO zone_cities (zone_id, city) VALUES
+        (palm_beach_zone_id, 'Boynton Beach'),
+        (palm_beach_zone_id, 'Delray Beach'),
+        (palm_beach_zone_id, 'Lake Worth'),
+        (palm_beach_zone_id, 'Lantana'),
+        (palm_beach_zone_id, 'Mangonia Park'),
+        (palm_beach_zone_id, 'North Palm Beach'),
+        (palm_beach_zone_id, 'Tequesta'),
+        (palm_beach_zone_id, 'West Palm Beach');
+END $$;
+
+-- Insert sample addresses from addresses.yml
+-- California - Eligible
+INSERT INTO addresses (street_address, city, state, zip_code, country, is_eligible, eligibility_reason) VALUES
+    ('212 encounter bay', 'Alameda', 'California', '90255', 'United States', true, 'Address is in eligible region: Alameda County, California'),
+    ('978 stannage avenu', 'Albany', 'California', '91106', 'United States', true, 'Address is in eligible region: Alameda County, California'),
+    ('433 Camden', 'San Ramon', 'California', '90210', 'United States', true, 'Address is in eligible region: Contra Costa County, California'),
+    ('1920 Hinckley', 'Albany', 'California', '94706', 'United States', true, 'Address is in eligible region: Alameda County, California'),
+    
+-- Florida - Eligible
+    ('123 Test', 'Delray Beach', 'Florida', '90255', 'United States', true, 'Address is in eligible region: Palm Beach County, Florida'),
+    
+-- New York - Not Eligible
+    ('400 E', 'Newburgh', 'New York', '12550', 'United States', false, 'Address is not in an eligible region: Orange County, New York'),
+    ('123 Test', 'Newburgh', 'New York', '12550', 'United States', false, 'Address is not in an eligible region: Orange County, New York'),
+    ('834 67th', 'Brooklyn', 'New York', '11220', 'United States', false, 'Address is not in an eligible region: Kings County, New York'),
+    ('11 Brooks Hill', 'Lansing', 'New York', '14882', 'United States', false, 'Address is not in an eligible region: Tompkins County, New York'),
+    ('2477 Norte Vista', 'WallKill', 'New York', '12589', 'United States', false, 'Address is not in an eligible region: Ulster County, New York'),
+    ('115 Noteockaway Beach Blv', 'Far Rockaway', 'New York', '11694', 'United States', false, 'Address is not in an eligible region: Queens County, New York'),
+    ('1574 Coast', 'Newburgh', 'New York', '12550', 'United States', false, 'Address is not in an eligible region: Orange County, New York'),
+    ('1725 Manzanita', 'Newburgh', 'New York', '12550', 'United States', false, 'Address is not in an eligible region: Orange County, New York'),
+    ('471 9th', 'Brooklyn', 'New York', '11215', 'United States', false, 'Address is not in an eligible region: Kings County, New York'),
+    ('2416 156', 'Newburgh', 'New York', '12550', 'United States', false, 'Address is not in an eligible region: Orange County, New York'),
+    ('6514 Parsons', 'Fresh Meadows', 'New York', '11365', 'United States', false, 'Address is not in an eligible region: Queens County, New York'),
+    ('1220 Box 1220 PSC 220', 'Wallkill', 'New York', '12589', 'United States', false, 'Address is not in an eligible region: Ulster County, New York'),
+    ('9311 La Grange', 'Wallkill', 'New York', '12589', 'United States', false, 'Address is not in an eligible region: Ulster County, New York'),
+    ('1140 Salisbury', 'Wallkill', 'New York', '12589', 'United States', false, 'Address is not in an eligible region: Ulster County, New York'),
+    ('524 Royal Oaks', 'Wallkill', 'New York', '12589', 'United States', false, 'Address is not in an eligible region: Ulster County, New York'),
+    ('2101 Raymond', 'Wallkill', 'New York', '12589', 'United States', false, 'Address is not in an eligible region: Ulster County, New York'),
+    ('16004 17th', 'Whitestone', 'New York', '11357', 'United States', false, 'Address is not in an eligible region: Queens County, New York'),
+    ('1356 Cleveland', 'Niagara Falls', 'New York', '14305', 'United States', false, 'Address is not in an eligible region: Niagara County, New York'),
+    
+-- Pennsylvania - Not Eligible
+    ('23 Green', 'Clairton', 'Pennsylvania', '15025', 'United States', false, 'Address is not in an eligible region: Allegheny County, Pennsylvania'),
+    ('760 Sproul', 'Springfield', 'Pennsylvania', '19064', 'United States', false, 'Address is not in an eligible region: Delaware County, Pennsylvania'),
+    ('320 Harrison', 'Lewisburg', 'Pennsylvania', '17837', 'United States', false, 'Address is not in an eligible region: Union County, Pennsylvania');
+
+-- Display summary
+DO $$
+DECLARE
+    zone_count INTEGER;
+    address_count INTEGER;
+    eligible_count INTEGER;
+BEGIN
+    SELECT COUNT(*) INTO zone_count FROM eligibility_zones;
+    SELECT COUNT(*) INTO address_count FROM addresses;
+    SELECT COUNT(*) INTO eligible_count FROM addresses WHERE is_eligible = true;
+    
+    RAISE NOTICE '========================================';
+    RAISE NOTICE 'Database initialized successfully!';
+    RAISE NOTICE '========================================';
+    RAISE NOTICE 'Loaded % eligibility zones', zone_count;
+    RAISE NOTICE 'Loaded % total addresses', address_count;
+    RAISE NOTICE '  - % eligible addresses', eligible_count;
+    RAISE NOTICE '  - % ineligible addresses', address_count - eligible_count;
+    RAISE NOTICE '========================================';
+END $$;

@@ -35,12 +35,13 @@ public class ApiSecurityConfig {
     
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http, 
-                                          ApiTokenAuthenticationFilter apiTokenAuthenticationFilter) throws Exception {
+                                        ApiTokenAuthenticationFilter apiTokenAuthenticationFilter) throws Exception {
         if (apiSecurityEnabled) {
             http
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authz -> authz
+                    .requestMatchers("/api/v1/address/**").permitAll()  // Add this
                     .requestMatchers(publicPaths.toArray(new String[0])).permitAll()
                     .anyRequest().authenticated()
                 )
@@ -49,6 +50,7 @@ public class ApiSecurityConfig {
             // Disable security for development/testing
             http
                 .csrf(csrf -> csrf.disable())
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))  // Add this
                 .authorizeHttpRequests(authz -> authz
                     .anyRequest().permitAll()
                 );

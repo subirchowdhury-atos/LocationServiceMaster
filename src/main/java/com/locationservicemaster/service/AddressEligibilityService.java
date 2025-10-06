@@ -3,6 +3,7 @@ package com.locationservicemaster.service;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,6 +35,8 @@ public class AddressEligibilityService {
     private EligibilityRuleEngine ruleEngine;
     @Autowired
     private AddressCacheService addressCacheService;
+    @Autowired
+    private AddressLookupService addressLookupService;
     
     @Transactional
     public AddressEligibilityResponse checkEligibility(AddressEligibilityRequest request) {
@@ -53,6 +56,15 @@ public class AddressEligibilityService {
             return response;
         }
         
+        // NEW: Check YAML preloaded addresses first (highest priority)
+        Optional<AddressEligibilityResponse> yamlResponse = checkYamlAddress(request, startTime);
+        if (yamlResponse.isPresent()) {
+            log.debug("Found address in YAML preloaded data");
+            // Cache the YAML result
+            addressCacheService.cacheEligibility(cacheKey, yamlResponse.get());
+            return yamlResponse.get();
+        }
+        
         // Check if address already exists in database
         Optional<Address> existingAddress = findExistingAddress(request);
         
@@ -63,10 +75,10 @@ public class AddressEligibilityService {
             return response;
         }
         
-        // Perform eligibility check
+        // Perform eligibility check via zones and rule engine
         EligibilityResult result = performEligibilityCheck(request);
         
-        // Save or update address
+        // Save or update address (temporarirly disabled)
         Address address = saveOrUpdateAddress(request, result);
         
         // Build response
@@ -77,6 +89,77 @@ public class AddressEligibilityService {
         addressCacheService.cacheEligibility(cacheKey, response);
         
         return response;
+    }
+    
+    /**
+     * Check if address exists in YAML preloaded data
+     */
+    private Optional<AddressEligibilityResponse> checkYamlAddress(AddressEligibilityRequest request, long startTime) {
+        // Build address lookup string - try exact match first
+        String lookupAddress = request.getStreetAddress();
+        
+        Optional<Map<String, String>> yamlData = addressLookupService.lookup(lookupAddress);
+        log.info("YAML lookup result: {}", yamlData.isPresent() ? "FOUND" : "NOT FOUND");
+
+        if (yamlData.isPresent()) {
+            Map<String, String> addressData = yamlData.get();
+            log.info("Address data: {}", addressData); 
+            
+            // Check if this YAML entry has eligibility info
+            String eligibleStr = addressData.get("eligible");
+            if (eligibleStr != null) {
+                boolean eligible = Boolean.parseBoolean(eligibleStr);
+                
+                log.info("Found YAML preloaded address: {} - Eligible: {}", lookupAddress, eligible);
+                
+                // Build address details from YAML data
+                AddressEligibilityResponse.AddressDetails addressDetails = AddressEligibilityResponse.AddressDetails.builder()
+                        .streetAddress(addressData.getOrDefault("street", request.getStreetAddress()))
+                        .streetAddress2(request.getStreetAddress2())
+                        .city(addressData.getOrDefault("city", request.getCity()))
+                        .state(addressData.getOrDefault("state", request.getState()))
+                        .zipCode(addressData.getOrDefault("zip", request.getZipCode()))
+                        .country(addressData.getOrDefault("country", request.getCountry()))
+                        .latitude(request.getLatitude())
+                        .longitude(request.getLongitude())
+                        .formattedAddress(formatYamlAddress(addressData))
+                        .build();
+                
+                String reason = eligible 
+                    ? String.format("Address is in eligible region: %s County, %s", 
+                        addressData.get("county"), addressData.get("state"))
+                    : String.format("Address is not in an eligible region: %s County, %s", 
+                        addressData.get("county"), addressData.get("state"));
+                
+                AddressEligibilityResponse response = AddressEligibilityResponse.builder()
+                        .eligible(eligible)
+                        .reason(reason)
+                        .address(addressDetails)
+                        .matchedZones(eligible ? List.of(addressData.get("county") + ", " + addressData.get("state")) : List.of())
+                        .confidenceScore(1.0) // High confidence for preloaded data
+                        .checkedAt(LocalDateTime.now())
+                        .cacheHit(false)
+                        .processingTimeMs(System.currentTimeMillis() - startTime)
+                        .build();
+                
+                return Optional.of(response);
+            }
+        }
+        
+        return Optional.empty();
+    }
+    
+    private String formatYamlAddress(Map<String, String> addressData) {
+        StringBuilder formatted = new StringBuilder();
+        formatted.append(addressData.getOrDefault("street", ""));
+        formatted.append(", ").append(addressData.getOrDefault("city", ""));
+        formatted.append(", ").append(addressData.getOrDefault("state", ""));
+        formatted.append(" ").append(addressData.getOrDefault("zip", ""));
+        String country = addressData.get("country");
+        if (country != null && !country.isEmpty()) {
+            formatted.append(", ").append(country);
+        }
+        return formatted.toString();
     }
     
     private Optional<Address> findExistingAddress(AddressEligibilityRequest request) {

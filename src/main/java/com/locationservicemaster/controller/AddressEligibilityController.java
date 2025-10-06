@@ -35,7 +35,7 @@ public class AddressEligibilityController {
     private AddressEligibilityService addressEligibilityService;
     
     /**
-     * Check if an address is eligible (matches Ruby implementation)
+     * Check if an address is eligible
      * POST /api/v1/address/eligibility_check
      * 
      * @param request Map containing "address" parameter (Ruby format)
@@ -54,27 +54,34 @@ public class AddressEligibilityController {
             return ResponseEntity.ok(response);
         }
         
-        // Lookup address components
-        Optional<Map<String, String>> addressComponents = addressLookupService.lookup(address);
+        // Create AddressEligibilityRequest from the simple address string
+        AddressEligibilityRequest eligibilityRequest = AddressEligibilityRequest.builder()
+                .streetAddress(address)
+                .city("") // YAML lookup doesn't need these
+                .state("")
+                .zipCode("00000") // Dummy value to pass validation
+                .build();
         
-        if (addressComponents.isEmpty()) {
-            Map<String, Object> response = new HashMap<>();
-            response.put("message", "Address Not found");
-            return ResponseEntity.ok(response);
-        }
-        
-        // Check eligibility
-        Map<String, Object> eligibilityResult = propertyEligibilityService.checkEligibility(addressComponents.get());
+        // Use AddressEligibilityService (with YAML integration)
+        AddressEligibilityResponse eligibilityResponse = addressEligibilityService.checkEligibility(eligibilityRequest);
         
         Map<String, Object> response = new HashMap<>();
         
-        if ("address_eligible".equals(eligibilityResult.get("message"))) {
+        if (eligibilityResponse.getEligible() != null && eligibilityResponse.getEligible()) {
             response.put("message", "address_eligible");
-            response.put("formatted_address", addressComponents.get());
-        } else if ("address not eligible".equals(eligibilityResult.get("message"))) {
-            response.put("message", "Address Not found");
+            
+            // Build formatted address from response
+            Map<String, String> formattedAddress = new HashMap<>();
+            formattedAddress.put("street", eligibilityResponse.getAddress().getStreetAddress());
+            formattedAddress.put("city", eligibilityResponse.getAddress().getCity());
+            formattedAddress.put("state", eligibilityResponse.getAddress().getState());
+            formattedAddress.put("zip", eligibilityResponse.getAddress().getZipCode());
+            formattedAddress.put("county", eligibilityResponse.getMatchedZones().isEmpty() ? "" : eligibilityResponse.getMatchedZones().get(0));
+            formattedAddress.put("country", eligibilityResponse.getAddress().getCountry());
+            
+            response.put("formatted_address", formattedAddress);
         } else {
-            response.put("message", "Address Not found");
+            response.put("message", "address not eligible");
         }
         
         return ResponseEntity.ok(response);
@@ -109,5 +116,10 @@ public class AddressEligibilityController {
         Map<String, String> request = new HashMap<>();
         request.put("address", address);
         return eligibilityCheck(request);
+    }
+
+    @GetMapping("/health")
+    public ResponseEntity<String> health() {
+        return ResponseEntity.ok("OK");
     }
 }

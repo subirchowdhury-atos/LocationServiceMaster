@@ -4,7 +4,7 @@ spring:
   
   # Database Configuration - PostgreSQL for local development
   datasource:
-    url: jdbc:postgresql://localhost:5432/location_service_dev
+    url: jdbc:postgresql://localhost:5433/location_service_dev
     driver-class-name: org.postgresql.Driver
     username: postgres
     password: postgres
@@ -83,7 +83,7 @@ spring:
 server:
   port: 8080
   servlet:
-    context-path: /api
+    context-path: /
   error:
     include-message: always
     include-binding-errors: always
@@ -141,8 +141,7 @@ api:
     enabled: false
     tokens: 00000-000-00000,11111-111-11111
     public-paths: >
-      /api/v1/address/health,
-      /api/v1/address/info,
+      /api/v1/address/**,
       /api/swagger-ui/**,
       /api/v3/api-docs/**,
       /api/swagger-ui.html,

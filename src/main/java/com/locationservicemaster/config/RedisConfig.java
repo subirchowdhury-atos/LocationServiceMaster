@@ -2,6 +2,7 @@ package com.locationservicemaster.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.CacheManager;
 import org.springframework.context.annotation.Bean;
@@ -13,12 +14,14 @@ import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
 import org.springframework.data.redis.connection.jedis.JedisConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
+import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.RedisSerializationContext;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
 import java.time.Duration;
 
 @Configuration
+@Slf4j
 public class RedisConfig {
     
     @Value("${redis.host:localhost}")
@@ -41,7 +44,12 @@ public class RedisConfig {
         if (!redisPassword.isEmpty()) {
             redisStandaloneConfiguration.setPassword(redisPassword);
         }
-        return new JedisConnectionFactory(redisStandaloneConfiguration);
+        
+        JedisConnectionFactory factory = new JedisConnectionFactory(redisStandaloneConfiguration);
+        
+        log.info("Configured JedisConnectionFactory for Redis at {}:{}", redisHost, redisPort);
+        
+        return factory;
     }
     
     @Bean
@@ -52,6 +60,29 @@ public class RedisConfig {
         template.setValueSerializer(new StringRedisSerializer());
         template.setHashKeySerializer(new StringRedisSerializer());
         template.setHashValueSerializer(new StringRedisSerializer());
+        template.setEnableTransactionSupport(false);
+        template.afterPropertiesSet();
+        return template;
+    }
+    
+    // Bean for Object values
+    @Bean(name = "redisTemplateObject")
+    public RedisTemplate<String, Object> redisTemplateObject(RedisConnectionFactory connectionFactory, 
+                                                              ObjectMapper objectMapper) {
+        RedisTemplate<String, Object> template = new RedisTemplate<>();
+        template.setConnectionFactory(connectionFactory);
+        
+        // Use Jackson serializer for Object values
+        ObjectMapper redisObjectMapper = objectMapper.copy();
+        redisObjectMapper.registerModule(new JavaTimeModule());
+        GenericJackson2JsonRedisSerializer jackson2JsonRedisSerializer = 
+            new GenericJackson2JsonRedisSerializer(redisObjectMapper);
+        
+        template.setKeySerializer(new StringRedisSerializer());
+        template.setValueSerializer(jackson2JsonRedisSerializer);
+        template.setHashKeySerializer(new StringRedisSerializer());
+        template.setHashValueSerializer(jackson2JsonRedisSerializer);
+        template.setEnableTransactionSupport(false);
         template.afterPropertiesSet();
         return template;
     }
@@ -59,7 +90,6 @@ public class RedisConfig {
     @Bean
     public CacheManager cacheManager(RedisConnectionFactory redisConnectionFactory, 
                                     ObjectMapper objectMapper) {
-        // Create a copy to avoid modifying the global ObjectMapper
         ObjectMapper cacheObjectMapper = objectMapper.copy();
         cacheObjectMapper.registerModule(new JavaTimeModule());
         

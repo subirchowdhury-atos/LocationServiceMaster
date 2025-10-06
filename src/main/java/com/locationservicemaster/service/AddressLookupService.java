@@ -1,221 +1,174 @@
 package com.locationservicemaster.service;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.RequiredArgsConstructor;
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+
+import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
+
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.Resource;
-import org.springframework.core.io.ResourceLoader;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
-import java.io.IOException;
-import java.util.*;
+import jakarta.annotation.PostConstruct;
 
-/**
- * Address Lookup Service
- * Handles address lookups with caching and Google Maps API integration
- */
+import java.io.InputStream;
+import java.util.*;
+import java.util.concurrent.TimeUnit;
+
 @Service
 @Slf4j
-@RequiredArgsConstructor
 public class AddressLookupService {
+    
+    @Autowired
+    @Qualifier("redisTemplateObject")
+    private RedisTemplate<String, Object> redisTemplate;
 
-    @Autowired
-    private AddressCacheService addressCacheService;
-    @Autowired
-    private GoogleMapService googleMapService;
-    @Autowired
-    private ObjectMapper objectMapper;
-    @Autowired
-    private ResourceLoader resourceLoader;
+    private static final String ADDRESS_CACHE_PREFIX = "address:";
+    private static final long CACHE_TTL_HOURS = 24;
+    
+    // In-memory cache (always used, with or without Redis)
+    private final Map<String, Map<String, String>> memoryCache = new HashMap<>();
+    
+    // Flag to track if Redis is available
+    private volatile boolean redisAvailable = false;
 
-    @Value("${google.maps.enabled:false}")
-    private boolean useGoogleMapsApi;
-
-    @Value("${address.fixtures.path:classpath:fixtures/addresses.json}")
-    private String fixturesPath;
+    @PostConstruct
+    public void loadAddressesFromYaml() {
+        log.info("Loading addresses from addresses.yml...");
+        
+        // Test Redis availability
+        redisAvailable = testRedisConnection();
+        
+        try {
+            ClassPathResource resource = new ClassPathResource("data/addresses.yml");
+            InputStream inputStream = resource.getInputStream();
+            
+            ObjectMapper yamlMapper = new ObjectMapper(new YAMLFactory());
+            AddressData addressData = yamlMapper.readValue(inputStream, AddressData.class);
+            
+            int loadedCount = 0;
+            int redisCount = 0;
+            
+            for (AddressEntry entry : addressData.getAddresses()) {
+                String key = entry.getInput().toLowerCase().trim();
+                
+                Map<String, String> formattedAddress = new HashMap<>();
+                formattedAddress.put("street", entry.getStreet());
+                formattedAddress.put("city", entry.getCity());
+                formattedAddress.put("zip", entry.getZip());
+                formattedAddress.put("state", entry.getState());
+                formattedAddress.put("county", entry.getCounty());
+                formattedAddress.put("country", entry.getCountry());
+                formattedAddress.put("eligible", String.valueOf(entry.isEligible()));
+                
+                // Always store in memory
+                memoryCache.put(key, formattedAddress);
+                loadedCount++;
+                
+                // Also try Redis if available
+                if (redisAvailable) {
+                    try {
+                        String redisKey = ADDRESS_CACHE_PREFIX + key;
+                        redisTemplate.opsForValue().set(redisKey, formattedAddress, CACHE_TTL_HOURS, TimeUnit.HOURS);
+                        redisCount++;
+                    } catch (Exception e) {
+                        log.warn("Failed to cache address in Redis: {}", key);
+                        redisAvailable = false;
+                    }
+                }
+                
+                log.debug("Loaded address: {} -> {}, {}", entry.getInput(), entry.getCity(), entry.getState());
+            }
+            
+            if (redisAvailable) {
+                log.info("Successfully loaded {} addresses (Memory: {}, Redis: {})", 
+                    loadedCount, loadedCount, redisCount);
+            } else {
+                log.info("Successfully loaded {} addresses into memory cache only (Redis unavailable)", 
+                    loadedCount);
+            }
+            
+        } catch (Exception e) {
+            log.error("Failed to load addresses from YAML file", e);
+        }
+    }
+    
+    private boolean testRedisConnection() {
+        try {
+            redisTemplate.getConnectionFactory().getConnection().ping();
+            log.info("Redis connection successful");
+            return true;
+        } catch (Exception e) {
+            log.warn("Redis connection failed: {}. Using memory cache only.", e.getMessage());
+            return false;
+        }
+    }
 
     /**
-     * Lookup an address with caching
-     * 
-     * @param address The address string to lookup
-     * @return Optional containing address components map if found
+     * Lookup an address
+     * Priority: Memory Cache -> Redis Cache
      */
     public Optional<Map<String, String>> lookup(String address) {
         if (address == null || address.trim().isEmpty()) {
             return Optional.empty();
         }
 
-        // Try to get from cache first
-        Optional<String> cachedResult = getFromCache(address);
-        if (cachedResult.isPresent()) {
-            try {
-                Map<String, String> result = objectMapper.readValue(
-                    cachedResult.get(), 
-                    new TypeReference<Map<String, String>>() {}
-                );
-                log.debug("Address found in cache: {}", address);
-                return Optional.of(result);
-            } catch (IOException e) {
-                log.error("Error parsing cached address data for: {}", address, e);
-            }
-        }
-
-        // Lookup address
-        Optional<Map<String, String>> result = useGoogleMapsApi 
-            ? lookupInGoogleMaps(address)
-            : getMockAddressResponse(address);
-
-        // Cache the result if found
-        result.ifPresent(addressData -> putInCache(address, addressData));
-
-        return result;
-    }
-
-    /**
-     * Get address from cache
-     */
-    private Optional<String> getFromCache(String address) {
-        return addressCacheService.get(address);
-    }
-
-    /**
-     * Lookup address using Google Maps API
-     */
-    private Optional<Map<String, String>> lookupInGoogleMaps(String address) {
-        try {
-            Optional<Map<String, Object>> response = googleMapService.getAddress(address);
-            
-            if (response.isEmpty()) {
-                log.debug("No results from Google Maps for address: {}", address);
-                return Optional.empty();
-            }
-
-            Map<String, Object> responseData = response.get();
-            @SuppressWarnings("unchecked")
-            List<Map<String, Object>> results = (List<Map<String, Object>>) responseData.get("results");
-            
-            if (results == null || results.isEmpty()) {
-                log.debug("Empty results from Google Maps for address: {}", address);
-                return Optional.empty();
-            }
-
-            return Optional.of(formatResult(results.get(0)));
-            
-        } catch (Exception e) {
-            log.error("Error looking up address in Google Maps: {}", address, e);
-            return Optional.empty();
-        }
-    }
-
-    /**
-     * Format Google Maps API result into standardized address components
-     */
-    private Map<String, String> formatResult(Map<String, Object> result) {
-        Map<String, String> addressHash = new HashMap<>();
-        List<String> streetComponents = new ArrayList<>();
-
-        @SuppressWarnings("unchecked")
-        List<Map<String, Object>> addressComponents = 
-            (List<Map<String, Object>>) result.get("address_components");
-
-        if (addressComponents == null) {
-            return addressHash;
-        }
-
-        for (Map<String, Object> component : addressComponents) {
-            @SuppressWarnings("unchecked")
-            List<String> types = (List<String>) component.get("types");
-            
-            if (types == null || types.isEmpty()) {
-                continue;
-            }
-
-            String type = types.get(0);
-            String longName = (String) component.get("long_name");
-
-            switch (type) {
-                case "street_number":
-                    streetComponents.add(longName);
-                    break;
-                case "route":
-                    streetComponents.add(longName);
-                    break;
-                case "locality":
-                    // City name
-                    addressHash.put("city", longName);
-                    break;
-                case "administrative_area_level_2":
-                    // Remove " County" suffix if present
-                    addressHash.put("county", longName.replace(" County", ""));
-                    break;
-                case "administrative_area_level_1":
-                    addressHash.put("state", longName);
-                    break;
-                case "country":
-                    addressHash.put("country", longName);
-                    break;
-                case "postal_code":
-                    // Use "zip" to match PropertyEligibilityService expectations
-                    addressHash.put("zip", longName);
-                    break;
-            }
-        }
-
-        // Combine street components
-        if (!streetComponents.isEmpty()) {
-            addressHash.put("street", String.join(" ", streetComponents));
-        }
-
-        return addressHash;
-    }
-
-    /**
-     * Store address in cache
-     */
-    private void putInCache(String address, Map<String, String> result) {
-        try {
-            String jsonResult = objectMapper.writeValueAsString(result);
-            addressCacheService.set(address, jsonResult);
-            log.debug("Cached address: {}", address);
-        } catch (IOException e) {
-            log.error("Error caching address data for: {}", address, e);
-        }
-    }
-
-    /**
-     * Get mock address response from fixtures file
-     */
-    private Optional<Map<String, String>> getMockAddressResponse(String address) {
-        try {
-            Map<String, Map<String, String>> sampleAddresses = loadSampleAddresses();
-            Map<String, String> addressData = sampleAddresses.get(address);
-            
-            if (addressData != null) {
-                log.debug("Found mock address for: {}", address);
-                return Optional.of(addressData);
-            }
-            
-            log.debug("No mock address found for: {}", address);
-            return Optional.empty();
-            
-        } catch (Exception e) {
-            log.error("Error loading mock address for: {}", address, e);
-            return Optional.empty();
-        }
-    }
-
-    /**
-     * Load sample addresses from fixtures file
-     */
-    private Map<String, Map<String, String>> loadSampleAddresses() throws IOException {
-        Resource resource = resourceLoader.getResource(fixturesPath);
+        String key = address.toLowerCase().trim();
         
-        return objectMapper.readValue(
-            resource.getInputStream(),
-            new TypeReference<Map<String, Map<String, String>>>() {}
-        );
+        log.debug("Looking up address: '{}'", key);
+        
+        // 1. Check in-memory cache first (fastest)
+        if (memoryCache.containsKey(key)) {
+            log.debug("Address found in memory cache: {}", address);
+            return Optional.of(memoryCache.get(key));
+        }
+        
+        log.debug("Address not found in memory cache");
+
+        // 2. Try Redis if available
+        if (redisAvailable) {
+            String redisKey = ADDRESS_CACHE_PREFIX + key;
+            try {
+                @SuppressWarnings("unchecked")
+                Map<String, String> result = (Map<String, String>) redisTemplate.opsForValue().get(redisKey);
+                
+                if (result != null) {
+                    log.debug("Address found in Redis cache: {}", address);
+                    // Cache in memory for faster future lookups
+                    memoryCache.put(key, result);
+                    return Optional.of(result);
+                }
+                
+                log.debug("Address not found in Redis cache");
+            } catch (Exception e) {
+                log.warn("Redis lookup failed: {}. Marking Redis as unavailable.", e.getMessage());
+                redisAvailable = false;
+            }
+        }
+
+        // Not found
+        log.debug("Address not found: {}", address);
+        return Optional.empty();
+    }
+
+    // Inner classes for YAML parsing
+    @Data
+    private static class AddressData {
+        private List<AddressEntry> addresses;
+    }
+
+    @Data
+    private static class AddressEntry {
+        private String input;
+        private String street;
+        private String city;
+        private String zip;
+        private String state;
+        private String county;
+        private String country;
+        private boolean eligible;
     }
 }

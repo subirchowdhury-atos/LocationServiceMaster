@@ -26,7 +26,7 @@ public class ApiTokenAuthenticationFilter extends OncePerRequestFilter {
     private final ObjectMapper objectMapper;
 
     private static final List<String> PUBLIC_ENDPOINTS = Arrays.asList(
-        "/api/v1/address/health",
+        "/api/v1/address",
         "/api/actuator",
         "/api/swagger-ui",
         "/api/v3/api-docs"
@@ -75,6 +75,11 @@ public class ApiTokenAuthenticationFilter extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilter(@NonNull HttpServletRequest request) {
+        // If security is disabled, don't filter any requests
+        if (!securityEnabled) {
+            return true;
+        }
+        
         String path = request.getRequestURI();
         
         // Check if path matches any public endpoint
